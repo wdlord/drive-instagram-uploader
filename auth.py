@@ -8,8 +8,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 import os
-os.chdir(r"<directory name here>")
-cred_directory = r"<directory of credits.json file here>"
+os.chdir(r"C:\Users\William\PycharmProjects\ConservOceanBot")
+cred_directory = r"C:\Users\William\PycharmProjects\ConservOceanBot\credentials.json"
 # default vvv
 # cred_directory = 'credentials.json'
 

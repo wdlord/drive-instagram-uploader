@@ -1,47 +1,35 @@
 from __future__ import print_function
 
-import os # used for file manipulation
+import os  # used for file manipulation (built-in)
 import auth  # class containing code to enter the drive
 import download  # class containing download from drive functions
 import serialize  # class containing functions for saving history
-import history
-from instabot import Bot  # module for uploading to Instagram
+from instabot import Bot  # module for uploading to Instagram (imported module)
 
 
 def main():
-    # enters the drive account
-    service = auth.login()
+    # ------
+    # setup
+    # ------
 
-    # read the history, which contains the last posts data [type, last_turtle, last_product]
-    post_history = serialize.read_history()
+    service = auth.login()  # enters the drive account
+    history = serialize.read_history()
 
-    # -----------------------------------------------------
+    # -----------------------------
     # read history and select post
-    # -----------------------------------------------------
+    # -----------------------------
 
-    # used to search through files in google drive, we will append the folder name to get in the next step
-    query = "mimeType='application/vnd.google-apps.folder' and name contains"
+    # used to search through files in Google Drive
+    query = "mimeType='application/vnd.google-apps.folder' and name contains "
+    query += "'TRTLE'" if history.post_type == 'turtle' else "'PST'"
 
-    # set the type of post to be making today
-    # history is updated on program run because new files may have been added
-    if post_history.post_type:
-        query += " 'TRTLE'"
-        post_number = post_history.turtle_history + 1
-    else:
-        query += " 'PST'"
-        post_number = post_history.product_history + 1
-
-    # get the set of turtle posts or product posts
-    results = service.files().list(q=query, spaces='drive', fields="nextPageToken, files(id, name, parents)",
-                                   pageToken=None).execute()
+    # get the set of turtle posts or product posts from the Drive
+    results = service.files().list(q=query, spaces='drive', fields="nextPageToken, files(id, name, parents)", pageToken=None).execute()
     folders = results.get('files', [])
 
-    # loop around the post schedule if we've reached the end
-    if post_number > len(folders):
-        post_number = 1
-
-    # find the folder containing the image and caption files
-    folder = folders[len(folders) - post_number]     # list of folders is stored backwards in drive
+    history.update_post_number(len(folders))    # we do this now in case an new post was added to the drive since last run
+    post_number = history.turtle if history.post_type == 'turtle' else history.product
+    folder = folders[-post_number]  # list of folders is stored backwards in Drive
 
     # prepare image
     image_location = download.image_download(service, folder["id"])
@@ -50,25 +38,29 @@ def main():
     caption_location = download.caption_download(service, folder["id"])
     caption_text = download.extract_caption(caption_location)
 
-    # updates the history for next run
-    serialize.update_history(post_history, post_number)
+    # saves the history
+    serialize.update_history(history)
 
     # -------------
     # POSTING CODE
     # -------------
 
+    with open('loginInfo', 'rb') as file:
+        username = file.readline()
+        password = file.readline()
+
     # start bot
     bot = Bot()
-    bot.login(username="<instagram username here>", password="<instagram password here>")
+    bot.login(username=username, password=password)
 
-    # prints errors
+    # prints error codes (200 means success)
     if bot.api.last_response != 200:
         print(bot.api.last_response)
 
     bot.upload_photo(image_location, caption=caption_text)
 
     # delete junk file
-    os.chdir(r"<directory containing post here>")
+    os.chdir(r"C:\Users\William\PycharmProjects\ConservOceanBot\POST")
     os.remove('image.jpg.REMOVE_ME')
 
 
