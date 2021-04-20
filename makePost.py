@@ -45,9 +45,9 @@ def main():
     # POSTING CODE
     # -------------
 
-    with open('loginInfo', 'rb') as file:
-        username = file.readline()
-        password = file.readline()
+    with open('loginInfo', 'r') as file:
+        username = file.readline().strip()
+        password = file.readline().strip()
 
     # start bot
     bot = Bot()
